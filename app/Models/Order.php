@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Order extends Model
 {
-    use HasFactory; // HasUuids permite que el ID se genere automáticamente
+    use HasFactory, HasUuids;
 
     // Protegemos solo el ID, el resto se puede asignar masivamente
     protected $guarded = ['id'];
@@ -17,6 +17,7 @@ class Order extends Model
     // Convierte el campo JSON 'adjustments' a array automáticamente
     protected $casts = [
         'adjustments' => 'array',
+        'attachments' => 'array', // ¡Importante para el campo FileUpload!
         'order_date' => 'datetime',
     ];
 
@@ -35,5 +36,10 @@ class Order extends Model
     public function status(): BelongsTo
     {
         return $this->belongsTo(Status::class);
+    }
+
+    public function order_type(): BelongsTo
+    {
+        return $this->belongsTo(OrderType::class);
     }
 }

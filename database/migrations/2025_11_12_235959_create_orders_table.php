@@ -15,13 +15,12 @@ return new class extends Migration
             $table->uuid('id')->primary(); // Perfecto usar UUID
 
             $table->text('description');
-
-            // Para tu requisito de "urgencia" (order_type_id)
-            $table->integer('order_type_id');
             // (Recomendación: Crea una tabla 'order_types' para esto)
 
             $table->json('adjustments')->nullable();
+            $table->json('attachments')->nullable();
             $table->dateTime('order_date');
+            $table->dateTime('pickup_date')->nullable();
             $table->text('feedback')->nullable();
             $table->integer('rating')->nullable();
 
@@ -29,6 +28,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('service_id')->constrained('services');
             $table->foreignId('status_id')->constrained('statuses');
+            $table->foreignId('order_type_id')->constrained('order_types');
             $table->timestamps();
         });
     }

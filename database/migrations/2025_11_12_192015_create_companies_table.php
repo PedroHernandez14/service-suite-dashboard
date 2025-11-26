@@ -15,8 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('name', 150)->unique();
             $table->string('identification_number', 50)->unique();
+            $table->string('address',255)->nullable();
 
             $table->foreignId('status_id')->constrained('statuses');
+            $table->foreignId('identification_type_id')->constrained('identification_types');
             $table->timestamps();
         });
     }

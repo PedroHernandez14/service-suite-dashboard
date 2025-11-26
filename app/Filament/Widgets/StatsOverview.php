@@ -6,7 +6,7 @@ use Filament\Widgets\ChartWidget;
 
 class StatsOverview extends ChartWidget
 {
-    protected static ?string $heading = 'Chart';
+    protected null|string $heading = 'Chart';
 
     protected function getData(): array
     {

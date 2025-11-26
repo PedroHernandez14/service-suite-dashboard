@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Http\Middleware\SetLocale;
+use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -27,13 +28,15 @@ class ServiceSuiteAdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->brandName('Service Suite')
+            ->brandLogo(asset('images/login.png'))
+            ->favicon(asset('images/favicon.svg'))
             ->id('service-suite-admin')
             ->path('service-suite-admin')
             ->login()
-            ->font('Oufit')
+            ->font('Montserrat')
             ->colors([
                 'primary' => Color::Sky,
-                'gray' => Color::Slate, // Cambia el tono de los grises (Slate, Gray, Zinc, Neutral, Stone)
+                'gray' => Color::Slate,
                 'danger' => Color::Red,
                 'success' => Color::Emerald,
                 'warning' => Color::Orange,
@@ -51,22 +54,18 @@ class ServiceSuiteAdminPanelProvider extends PanelProvider
                 Widgets\FilamentInfoWidget::class,
             ])
             ->userMenuItems([
-                // Botón: Cambiar a Español
                 MenuItem::make()
                     ->label('Español')
                     ->url(fn () => route('switch-language', 'es'))
-                    ->icon('heroicon-o-language') // Icono visual
-                    ->sort(1) // Ordenarlo arriba
-                    // Truco visual: Ocultarlo si YA estás en español
+                    ->icon('heroicon-o-language')
+                    ->sort(1)
                     ->hidden(fn() => app()->getLocale() === 'es'),
 
-                // Botón: Cambiar a Inglés
                 MenuItem::make()
                     ->label('English')
                     ->url(fn () => route('switch-language', 'en'))
                     ->icon('heroicon-o-language')
                     ->sort(1)
-                    // Truco visual: Ocultarlo si YA estás en inglés
                     ->hidden(fn() => app()->getLocale() === 'en'),
             ])
             ->middleware([
@@ -81,8 +80,12 @@ class ServiceSuiteAdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
                 SetLocale::class
             ])
+            ->plugins([
+                FilamentShieldPlugin::make(),
+            ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->viteTheme('resources/css/filament/service-suite-admin/theme.css'); // <-- TEMA CSS REGISTRADO
     }
 }

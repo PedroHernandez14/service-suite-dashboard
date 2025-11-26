@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +19,14 @@ class Person extends Model
     protected $casts = [
         'birth_date' => 'date',
     ];
+
+    protected function dniAndFullName(): Attribute
+    {
+        $identificationType = $this->identificationType->acronym;
+        return Attribute::make(
+            get: fn ($vale, $attributes) => $identificationType.$attributes['dni'].' - '.$attributes['first_name'].' '.$attributes['last_name'],
+        );
+    }
 
     // Relación inversa (opcional, pero útil): Una persona puede ser un usuario
     public function user(): HasOne

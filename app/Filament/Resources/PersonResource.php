@@ -3,48 +3,73 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\PersonResource\Pages;
+use App\Filament\Resources\PersonResource\RelationManagers\ContactsRelationManager;
 use App\Models\Person;
+use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Forms\Components\Grid;
+use Filament\Schemas\Components\Grid;
 use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Form;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Get;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class PersonResource extends Resource
+class PersonResource extends Resource implements HasShieldPermissions
 {
     protected static ?string $model = Person::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-user-group';
 
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static string|null|\UnitEnum $navigationGroup = 'Configuración';
     protected static ?string $modelLabel = 'Persona';
     protected static ?string $pluralModelLabel = 'Personas';
     protected static ?string $slug = 'personas';
 
-    public static function form(Form $form): Form
+    public static function getPermissionPrefixes(): array
     {
-        return $form
-            ->schema([
+        return [
+            'view',
+            'view_any',
+            'create',
+            'update',
+            'delete',
+            'delete_any',
+        ];
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
                 // --- SECCIÓN 1: DATOS PERSONALES ---
                 Section::make('Datos Personales')
-                    ->schema([
+                    ->columnSpanFull()
+                    ->components([
                         Grid::make(2)
-                            ->schema([
+                            ->components([
                                 Forms\Components\TextInput::make('first_name')
-                                    ->label('Nombres')->required()->maxLength(100),
+                                    ->label('Nombres')
+                                    ->required()
+                                    ->maxLength(100),
+
                                 Forms\Components\TextInput::make('last_name')
-                                    ->label('Apellidos')->required()->maxLength(100),
+                                    ->label('Apellidos')
+                                    ->required()
+                                    ->maxLength(100),
                             ]),
+
                         Grid::make(2)
-                            ->schema([
+                            ->components([
                                 Grid::make(4)
-                                    ->schema([
+                                    ->components([
                                         Forms\Components\Select::make('identification_type_id')
                                             ->label('Tipo')
                                             ->relationship('identificationType', 'acronym') // Muestra V, E, J...
@@ -73,102 +98,8 @@ class PersonResource extends Resource
                                     ->prefixIcon('heroicon-m-calendar'), // No pueden nacer en el futuro
                             ]),
                     ]),
-
-                // --- SECCIÓN 2: CONTACTO PRINCIPAL (Obligatorio) ---
-                Section::make('Datos de Contacto')
-                    ->description('Medios de comunicación primarios (Guardados en ficha)')
-                    ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                Grid::make(9)
-                                    ->schema([
-                                        Forms\Components\Select::make('main_phone_prefix')
-                                            ->label('País')
-                                            ->options([
-                                                '+58' => '🇻🇪 +58',
-                                                '+1'  => '🇺🇸 +1',
-                                                '+34' => '🇪🇸 +34',
-                                                // ... más países
-                                            ])
-                                            ->default('+58')
-                                            ->selectablePlaceholder(false)
-                                            ->formatStateUsing(fn ($record) => $record?->contacts->where('type', 'phone')->first()?->prefix ?? '+58')
-                                            ->dehydrated(false)
-                                            ->columnSpan(3),
-
-                                        Forms\Components\TextInput::make('main_phone')
-                                            ->label('Teléfono Principal')
-                                            ->tel()
-                                            ->mask('999 999 9999')
-                                            ->required()
-                                            ->length(12)
-                                            ->formatStateUsing(fn ($record) => $record?->contacts->where('type', 'phone')->first()?->value)
-                                            ->dehydrated(false)
-                                            ->columnSpan(6),
-                                    ])
-                                    ->columnSpan(1),
-
-                                Forms\Components\TextInput::make('main_email')
-                                    ->label('Correo Principal')
-                                    ->email()
-                                    ->required()
-                                    ->prefixIcon('heroicon-m-envelope')
-                                    ->formatStateUsing(fn ($record) => $record?->contacts->where('type', 'email')->first()?->value)
-                                    ->dehydrated(false)
-
-                                // Grid para Prefijo + Teléfono Principal
-                            ]),
-                    ]),
-
-                Section::make('Datos Adicionales')
-                    ->description('Correos o teléfonos secundarios (Opcional)')
-                    ->collapsed()
-                    ->schema([
-                        Repeater::make('contacts') // Nombre de la relación
-                        ->relationship()
-                            ->hiddenLabel() // Oculta la etiqueta "Contacts" para que se vea limpio
-                            ->addActionLabel('Agregar nuevo contacto')
-                            ->defaultItems(1) // Muestra 1 vacío al empezar
-                            ->grid(2) // Muestra los contactos en 2 columnas (opcional, se ve bien)
-                            ->schema([
-                                // 1. Tipo
-                                Forms\Components\Select::make('type')
-                                    ->label('Tipo')
-                                    ->options([
-                                        'email' => '✉️ Correo',
-                                        'phone' => '📱 Teléfono',
-                                        'whatsapp' => '💬 WhatsApp',
-                                    ])
-                                    ->live()
-                                    ->required(false)// Reactivo
-                                    ->afterStateUpdated(fn (Forms\Set $set) => $set('prefix', '+58')) // Default al cambiar
-                                    ->columnSpanFull(), // Ocupa todo el ancho de la tarjetita
-
-                                // 2. Prefijo (Solo teléfonos)
-                                Forms\Components\Select::make('prefix')
-                                    ->label('Prefijo')
-                                    ->options(['+58' => '🇻🇪 +58', '+1' => '🇺🇸 +1', '+34' => '🇪🇸 +34'])
-                                    ->default('+58')
-                                    ->visible(fn (Get $get) => in_array($get('type'), ['phone', 'whatsapp']))
-                                    ->columnSpan(1),
-
-                                // 3. Valor
-                                Forms\Components\TextInput::make('value')
-                                    ->label('Dato')
-                                    ->email(fn (Get $get) => $get('type') === 'email')
-                                    ->mask(fn (Get $get) => in_array($get('type'), ['phone', 'whatsapp']) ? '999 999 9999' : null)
-                                    // Si es email ocupa todo, si es teléfono comparte espacio con prefijo
-                                    ->columnSpan(fn (Get $get) => in_array($get('type'), ['phone', 'whatsapp']) ? 2 : 3),
-
-                                // 4. Etiqueta
-                                Forms\Components\TextInput::make('label')
-                                    ->label('Etiqueta')
-                                    ->placeholder('Ej: Principal, Trabajo...')
-                                    ->columnSpanFull(),
-                            ])
-                            ->columns(3), // Grid interno del item del repeater
-                    ]),
             ]);
+
     }
 
     public static function table(Table $table): Table
@@ -237,13 +168,13 @@ class PersonResource extends Resource
                     ->label('Tipo de Documento'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                EditAction::make()
                     ->modalWidth('2xl'), // Ajuste para que el Repeater se vea bien
-                Tables\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -251,14 +182,14 @@ class PersonResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            ContactsRelationManager::class
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListPeople::route('/'),
+            'index' => Pages\ManageServices::route('/'),
             'create' => Pages\CreatePerson::route('/create'),
             'edit' => Pages\EditPerson::route('/{record}/edit'),
         ];

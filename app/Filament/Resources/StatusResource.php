@@ -5,11 +5,15 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\StatusResource\Pages;
 use App\Filament\Resources\StatusResource\RelationManagers;
 use App\Models\Status;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Forms\Components\ColorPicker;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Support\Colors\Color;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -21,19 +25,19 @@ class StatusResource extends Resource
     protected static ?string $model = Status::class;
 
     // Icono de "Etiqueta" (Ideal para estados)
-    protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-tag';
 
     // Agrupamos este recurso para que no desordene el menú principal
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static string|null|\UnitEnum $navigationGroup = 'Configuración';
 
     protected static ?string $modelLabel = 'Estado';
     protected static ?string $pluralModelLabel = 'Estados';
     protected static ?string $slug = 'estados';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Section::make('Información del Estado')
                     ->description('Define los estados posibles para las órdenes y servicios')
                     ->schema([
@@ -93,12 +97,12 @@ class StatusResource extends Resource
                 // No hacen falta filtros complejos aquí por ahora
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

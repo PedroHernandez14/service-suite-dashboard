@@ -7,11 +7,19 @@ use App\Filament\Resources\ServiceResource\RelationManagers;
 use App\Models\Service;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Form;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,16 +29,16 @@ class ServiceResource extends Resource
 {
     protected static ?string $model = Service::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-wrench-screwdriver';
+    protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-wrench-screwdriver';
 
     protected static ?string $modelLabel = 'Servicio';
     protected static ?string $pluralModelLabel = 'Catálogo de Servicios';
     protected static ?string $slug = 'servicios';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Section::make()
                     ->schema([
                         Grid::make(1) // Una columna para que se vea limpio en modales o full page
@@ -46,17 +54,30 @@ class ServiceResource extends Resource
 
                                 // TRUCO PRO: Permitir crear un tipo nuevo desde aquí mismo
                                 ->createOptionForm([
-                                    Forms\Components\TextInput::make('name')
-                                        ->required()
-                                        ->maxLength(100),
-                                    Forms\Components\Select::make('status_id') // Asumiendo que Status existe
-                                    ->relationship('status', 'name')
-                                        ->default(1)
-                                        ->required(),
+                                    Section::make('Nuevo Tipo de Servicio')
+                                        ->schema([
+                                            TextInput::make('name')
+                                                ->label('Nombre del Tipo')
+                                                ->required()
+                                                ->maxLength(100)
+                                                ->unique('service_types', 'name'), // Validación única para que no repitan
+
+                                            Select::make('status_id')
+                                                ->label('Estado')
+                                                ->relationship('status', 'name') // Relación dentro de ServiceType
+                                                ->default(1)
+                                                ->required(),
+
+                                            Textarea::make('description')
+                                                ->label('Descripción (Opcional)')
+                                                ->rows(2)
+                                                ->maxLength(255),
+                                        ])
+                                        ->columns(1),
                                 ]),
 
                             // 2. DESCRIPCIÓN (Nombre del servicio)
-                            Forms\Components\Textarea::make('description')
+                            Textarea::make('description')
                                 ->label('Nombre / Descripción del Servicio')
                                 ->required()
                                 ->maxLength(255)
@@ -106,10 +127,10 @@ class ServiceResource extends Resource
                     ->preload(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                EditAction::make(),
 
                 // --- ACCIÓN DE DESCARGA PDF ---
-                Tables\Actions\Action::make('pdf')
+                Action::make('pdf')
                     ->label('Descargar PDF')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('warning') // Un color distintivo (Naranja/Amarillo)
@@ -125,11 +146,11 @@ class ServiceResource extends Resource
                             echo $pdf->output();
                         }, 'servicio-' . $record->id .'-'. Carbon::now() . '.pdf');
                     }),
-                Tables\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

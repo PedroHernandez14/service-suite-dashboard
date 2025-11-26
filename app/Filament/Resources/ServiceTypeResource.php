@@ -5,10 +5,15 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ServiceTypeResource\Pages;
 use App\Filament\Resources\ServiceTypeResource\RelationManagers;
 use App\Models\ServiceType;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Form;
+use Filament\Forms\Components\ColorPicker;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Support\Colors\Color;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -19,17 +24,17 @@ class ServiceTypeResource extends Resource
 {
     protected static ?string $model = ServiceType::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-rectangle-stack';
 
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static string|null|\UnitEnum $navigationGroup = 'Configuración';
     protected static ?string $modelLabel = 'Tipo de Servicio';
     protected static ?string $pluralModelLabel = 'Tipos de Servicio';
     protected static ?string $slug = 'tipos-servicio';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Section::make('Detalles del Tipo')
                     ->schema([
                         Forms\Components\TextInput::make('name')
@@ -44,8 +49,32 @@ class ServiceTypeResource extends Resource
                             ->relationship('status', 'name')
                             ->label('Estado')
                             ->required()
-                            ->default(1) // Asumiendo que ID 1 es 'Activo'
-                            ->native(false),
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->native(false)
+
+                            // TRUCO PRO: Permitir crear un tipo nuevo desde aquí mismo
+                            ->createOptionForm([
+                                Section::make('Nuevo Estatus')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('name')
+                                            ->label('Nombre del Estado')
+                                            ->required()
+                                            ->maxLength(100)
+                                            ->unique('statuses', 'name'), // Validación única para que no repitan
+                                        ColorPicker::make('color')
+                                            ->label('Color del Tag')
+                                            ->default('#808080') // Un gris por defecto (Hex)
+                                            ->format('hex')
+                                            ->required(),
+                                        Forms\Components\Textarea::make('description')
+                                            ->label('Descripción')
+                                            ->maxLength(255)
+                                            ->rows(3),
+                                    ])
+                                    ->columns(1),
+                            ]),
 
                         Forms\Components\Textarea::make('description')
                             ->label('Descripción')
@@ -94,12 +123,12 @@ class ServiceTypeResource extends Resource
                     ->label('Estado'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
